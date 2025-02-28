@@ -1,0 +1,5 @@
+scr_*\.*
+node_modules
+temp
+**.pac
+/*.json

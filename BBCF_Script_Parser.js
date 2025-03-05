@@ -66,10 +66,10 @@ for (let i = 0; i < args.length; i++) {
     args.splice(i, 1)
     logfile = path.resolve(__dirname + '/BBCF_Script_Parser.log');
 		if (fs.existsSync(logfile + '.bak')) {
-			fs.unlink(logfile + '.bak', (err) => {console.error(err)});
+			fs.unlink(logfile + '.bak', (err) => {if (err) {console.error(err)}});
 		}
 		if (fs.existsSync(logfile)) {
-			fs.rename(logfile, logfile + '.bak', (err) => {console.error(err)})
+			fs.rename(logfile, logfile + '.bak', (err) => { if (err){console.error(err)}})
 		}
     if (!isNaN(parseInt(args[i]))) {
       debugLevel = parseInt(args.splice([i]));
@@ -254,6 +254,7 @@ function parse_bbscript_routine(filename) {
     let file = fs.createReadStream(filename, { highWaterMark: streamSize })
 
     let ast_root = types.Program([]);
+    console.log(JSON.stringify(ast_root))
     let ast_stack = ast_root.body;
     let astor_handler = [];
     let FUNCTION_COUNT = 0;
@@ -334,7 +335,7 @@ function parse_bbscript_routine(filename) {
             }
             //ast_stack[-1].push(types.FunctionDeclaration(function_clean(cmd_data), empty_args, [], [Name(id="State")]));
             //console.log(cmd_data)
-            ast_stack.push(types.FunctionDeclaration(types.Identifier(cmd_data[0]), [types.Identifier('State')], types.BlockStatement([]), false, false, babelOptions));
+            ast_stack.push(types.FunctionDeclaration(types.Identifier(cmd_data[0]), [types.AssignmentPattern(types.Identifier('type'), types.Identifier('State'))], types.BlockStatement([]), false, false, babelOptions));
             ast_stack.push(ast_stack.at(-1).body.body)
             lastRootFunction = 'State: ' + cmd_data[0]
             break;

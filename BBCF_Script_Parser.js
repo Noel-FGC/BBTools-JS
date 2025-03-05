@@ -3,14 +3,18 @@ const path = require('node:path');
 const struct = require('python-struct');
 const generate = require('@babel/generator').default;
 const { types } = require('@babel/core');
+const traverse = require('@babel/traverse').default;
 const util = require ('util');
 
 let args = process.argv.slice(1);
 let ogargs = JSON.stringify(args)
 let streamSize = 2000000; // 2mb
-let debugLevel = 0;
+let debugLevel = 1;
 let dumpTree = 0;
 let logfile;
+let errorLevel = 0;
+let raw = false;
+let tempRaw = false;
 
 const babelOptions = {
 	comments: false,
@@ -31,10 +35,16 @@ for (let i = 0; i < args.length; i++) {
     continue;
   }
 
+  if (arg.toLowerCase() == '--raw' || arg == '-r') {
+    raw = true
+    args.splice(i, 1)
+  }
 
   if (arg.toLowerCase() == '--streamsize' || arg == '-s') {
     args.splice(i, 1)
     streamSize = args.splice(i, 1)[0].toLowerCase()
+
+    i--
 
     if (streamSize.endsWith('kb')) {
       streamSize.slice(0, -2);
@@ -63,6 +73,7 @@ for (let i = 0; i < args.length; i++) {
 		}
     if (!isNaN(parseInt(args[i]))) {
       debugLevel = parseInt(args.splice([i]));
+      i--
     } else {
       debugLevel = 2;
     }
@@ -196,7 +207,6 @@ function get_object_name(cmd_data) {
 function sanitizer(command, values) {
   let returnValues = [];
 	values.forEach(value => {
-		//console.log(command)
     if ([43, 14001, 14012].includes(command) && (typeof value == "number")) { // This doesnt seem to get called
       let tmp = (types.StringLiteral(find_named_value(command, value)))
 			//tmp.arguments.extra.raw = value.toString(16);
@@ -222,8 +232,6 @@ function sanitizer(command, values) {
 		} else if (typeof value == 'string') {
 			returnValues.push(types.StringLiteral(value))
 		}
-		//returnValues.push(types.StringLiteral(value.toString()))
-		//else returnValues.push(types.Identifier(value))
   });
 	return returnValues;
 }
@@ -239,16 +247,17 @@ function function_clean(command) {
 }
 
 
-async function parse_bbscript_routine(filename) {
+function parse_bbscript_routine(filename) {
 
   return new Promise((resolve, reject) => {
     
     let file = fs.createReadStream(filename, { highWaterMark: streamSize })
 
-    let ast_root = types.program([]);
+    let ast_root = types.Program([]);
     let ast_stack = ast_root.body;
     let astor_handler = [];
     let FUNCTION_COUNT = 0;
+    let lastRootFunction = 'Root';
 
     file.on('end', () => {
       debuglog('stream ended')
@@ -271,7 +280,8 @@ async function parse_bbscript_routine(filename) {
         let cmd_data = [];
         if (file.readableLength < struct.sizeOf(db_data.format) || file.readableLength < db_data.size - 4) {
           //console.log('Dude what the fuck are you parsing?')
-          debuglog('Stream Not Big Enough To Parse Command, The Stream Size Limit Can Be Altered With --streamsize, Be Careful.', 0);
+          debuglog('ReadStream Not Big Enough To Parse Command, The Stream Size Limit Can Be Altered With --streamsize, Be Careful To Not Set It Too High.', 0);
+          debuglog('Tell Noel To Stop Being A Lazy Ass And Actually Figure Out How Streams Work')
           console.log(current_cmd)
           file.unshift(struct.pack(MODE + "I", current_cmd))
           file.close()
@@ -290,7 +300,7 @@ async function parse_bbscript_routine(filename) {
         cmd_data.forEach((value, index) => {
           if (typeof value == 'buffer') {
             try {
-              cmd_data[i] = value.toString().replace("\x00", '')
+        cmd_data[i] = value.toString().replace("\x00", '')
             } catch (e) {
               // Handles unicode bug if it happens, eg kk400_13
               let debug = ''
@@ -308,96 +318,188 @@ async function parse_bbscript_routine(filename) {
 
         // AST STUFF -- someone kill me
 
+
+        if (raw == true || tempRaw == true) {
+          if ((tempRaw) && (current_cmd == 1 || current_cmd == 9)) { // Disable tempRaw On startState or startSubroutine
+            tempRaw = false;
+          }
+          ast_stack.push(types.CallExpression(types.Identifier(db_data.name), sanitizer(current_cmd, cmd_data), babelOptions))
+          continue; // Continue to Next Loop
+        }
+
         switch(parseInt(current_cmd)) {
           case 0:  //startState
-            //if (ast_stack.length > 1) {
-            //    ast_stack.pop();
-            //}
+            if (typeof ast_stack.at(-1) == 'array') {
+                ast_stack.pop();
+            }
             //ast_stack[-1].push(types.FunctionDeclaration(function_clean(cmd_data), empty_args, [], [Name(id="State")]));
             //console.log(cmd_data)
-            ast_stack.push(types.FunctionDeclaration(types.Identifier(cmd_data[0]), [], types.BlockStatement([]), false, false, babelOptions));
-            ast_stack.push(ast_stack.at(-1).body.body)
-            break;
-          case 8:  //startSubroutine
             ast_stack.push(types.FunctionDeclaration(types.Identifier(cmd_data[0]), [types.Identifier('State')], types.BlockStatement([]), false, false, babelOptions));
             ast_stack.push(ast_stack.at(-1).body.body)
+            lastRootFunction = 'State: ' + cmd_data[0]
+            break;
+          case 8:  //startSubroutine
+            if (typeof ast_stack.at(-1) == 'Array') {
+              ast_stack.pop();
+            }
+            ast_stack.push(types.FunctionDeclaration(types.Identifier(cmd_data[0]), [
+              types.AssignmentPattern(types.Identifier('type'), types.Identifier('Subroutine'))
+            ], types.BlockStatement([]), false, false, babelOptions));
+            ast_stack.push(ast_stack.at(-1).body.body)
+            lastRootFunction = 'Subroutine: ' + cmd_data[0]
             break;
           case 15: //upon
-            console.log(ast_stack)
+            //console.log(ast_stack)
+            try {
             ast_stack.at(-1).push(types.FunctionDeclaration(types.Identifier(get_upon_name(cmd_data[0])), [], types.BlockStatement([])))
             ast_stack.push(ast_stack.at(-1).at(-1).body.body)
-
+            } catch (error) {
+              //debuglog(error, 1)
+            }
             break;
-          //
-          //case 4: //if
-          //  if (cmd_data[1] == 0) {
-          //    let arcsysdoubleifspaghetti;
-          //
-          //    try {
-          //      if (ast_stack[-1][-1]) { 
-          //        arcsysdoubleifspaghetti = ast_stack[-1][-1];
-          //      }
-          //    } catch(error) {
-          //      arcsysdoubleifspaghetti = true;
-          //    }
-          //
-          //    console.log(typeof arcsysdoubleifspaghetti)
-          //    if (typeof arcsysdoubleifspaghetti == 'object') {
-          //      try {
-          //        tmp = arcsysdoubleifspaghetti.test
-          //        ast_stack.at(-1).body.body.push(types.IfStatement(tmp, types.BlockStatement([])))
-          //        ast_stack.push(ast_stack.at(-1).body.body.at(-1).consequent.body)
-          //        ast_stack.at(-2).body.body.pop(-2)
-          //      } catch(error) {
-          //        debuglog(error, 0)
-          //        tmp = get_slot_name(0)
-          //        ast_stack.at(-1).push(types.IfStatement(tmp, types.BlockStatement([])))
-          //        ast_stack.push(ast_stack[-1][-1].consequent.body)
-          //      }
-          //    } else {
-          //      ast_stack.at(-1).body.body.push(types.IfStatement(types.Identifier(get_slot_name(cmd_data[1])), types.BlockStatement([])));
-          //
-          //
-          //      //console.log(ast_stack)
-          //      ast_stack.push(
-          //        types.FunctionDeclaration(
-          //          types.Identifier('TemporaryIfStatementNode'),
-          //          [],
-          //          types.BlockStatement(
-          //            ast_stack.at(-1).body.body.at(-1).consequent.body
-          //          )
-          //        )
-          //      );
-          //    };
-          //  } else {
-          //    tmp = get_slot_name(cmd_data[1])
-          //    ast_stack.at(-1).body.body.push(types.IfStatement(types.Identifier(get_slot_name(cmd_data[1])), types.BlockStatement([])))
-          //    //ast_stack.push(ast_stack.at(-1).body.body.at(-1).consequent.body)
-          //
-          //    ast_stack.push(
-          //      types.FunctionDeclaration(
-          //        types.Identifier('TemporaryIfStatementNode'),
-          //        [],
-          //        types.BlockStatement(
-          //          ast_stack.at(-1).body.body.at(-1).consequent.body
-          //        )
-          //      )
-          //    )
-          //    //console.log(ast_stack)
-          //  }
-          //  //ast_stack.at(-1).body.body.push(types.IfStatement(types.ExpressionStatement(), [], []))
-          //  break;
-          //case 5:
-          //  ast_stack.pop()
-          //  break;
 
+          case 4: //if
+            if (cmd_data[1] == 0) {
+              let arcsysdoubleifspaghetti;
 
+              try {
+                if (ast_stack[-1][-1]) { 
+                  arcsysdoubleifspaghetti = ast_stack.at(-1).at(-1);
+                }
+              } catch {
+                arcsysdoubleifspaghetti = true;
+              }
 
+              //debuglog(typeof arcsysdoubleifspaghetti);
+              //debuglog(typeof ast_stack.at(-1).at(-1));
+              if (typeof arcsysdoubleifspaghetti === 'object') {
+                try {
+                    tmp = arcsysdoubleifspaghetti.test
+                    ast_stack.at(-1).push(types.IfStatement(tmp, types.BlockStatement([])));
+                    ast_stack.push(ast_stack.at(-1).at(-1).consequent.body)
+                    ast_stack.at(-2)(-1).pop(-2)
+                  } catch(error) {
+                    debuglog(`Pushing If node failed at ${lastRootFunction}  with: "${error}"`, 1)
+                    debuglog(`Ast Tree Will Be Dumped`)
+  
+                    errorLevel += 1;
+                    tmp = types.Identifier(get_slot_name(0))
+                    ast_stack.at(-1).push(types.IfStatement(tmp, types.BlockStatement([])));
+                    ast_stack.push(ast_stack.at(-1).at(-1).consequent.body)
+                }
+              } else {
+                //console.log(ast_stack)
+                try {
+                  ast_stack.at(-1).push(types.IfStatement(types.Identifier(get_slot_name(cmd_data[1])), types.BlockStatement([])));
+                  ast_stack.push(ast_stack.at(-1).at(-1).consequent.body)
+                } catch (error) {
+                  debuglog(`Pushing If node failed at ${lastRootFunction} with: "${error}"`, 1)
+                  debuglog(`Ast Tree Will Be Dumped, Attempting To Continue In Raw Mode`)
+                  errorLevel += 1;
+                  tempRaw = true;
+                  if (db_data.format !== undefined) {
+                      file.unshift(struct.pack(MODE + db_data.format, cmd_data))
+                    } else {
+                      file.unshift(cmd_data)
+                    }
+                    file.unshift(struct.pack(MODE + 'I', current_cmd))
+                  debuglog(error, 1)
+                }
+              };
+            } else {
+              tmp = get_slot_name(cmd_data[1])
+              try {
+                ast_stack.at(-1).push(types.IfStatement(types.Identifier(get_slot_name(cmd_data[1])), types.BlockStatement([])));
+                ast_stack.push(ast_stack.at(-1).at(-1).consequent.body)
+              } catch (error) {
+                  debuglog(`Pushing If node failed at ${lastRootFunction} with: "${error}"`, 1)
+                  debuglog(`Ast Tree Will Be Dumped, Attempting To Continue In Raw Mode`)
+                  if (db_data.format !== undefined) {
+                      file.unshift(struct.pack(MODE + db_data.format, cmd_data))
+                    } else {
+                      file.unshift(cmd_data)
+                    }
+                    file.unshift(struct.pack(MODE + 'I', current_cmd))
+                  tempRaw = true;
+                  errorLevel += 1;
+              }
+            }
+            break;
+          case 54: //ifNot
+            if (cmd_data[1] == 0) {
+              let arcsysdoubleifspaghetti;
 
-          //case 54: //ifNot
-          //  break;
-          //case 56: //else
-          //  break;
+              try {
+                if (ast_stack[-1][-1]) { 
+                  arcsysdoubleifspaghetti = ast_stack.at(-1).at(-1);
+                }
+              } catch {
+                arcsysdoubleifspaghetti = true;
+              }
+
+              //debuglog(typeof arcsysdoubleifspaghetti);
+              //debuglog(typeof ast_stack.at(-1).at(-1));
+              if (typeof arcsysdoubleifspaghetti === 'object') {
+                try {
+                    tmp = arcsysdoubleifspaghetti.test
+                    ast_stack.at(-1).push(types.IfStatement(tmp, types.BlockStatement([])));
+                    ast_stack.push(ast_stack.at(-1).at(-1).consequent.body)
+                    ast_stack.at(-2)(-1).pop(-2)
+                  } catch(error) {
+                    debuglog(`Pushing If node failed at ${lastRootFunction}  with: "${error}"`, 1)
+                    debuglog(`Ast Tree Will Be Dumped`)
+  
+                    errorLevel += 1;
+                    tmp = types.Identifier(get_slot_name(0))
+                    ast_stack.at(-1).push(types.IfStatement(tmp, types.BlockStatement([])));
+                    ast_stack.push(ast_stack.at(-1).at(-1).consequent.body)
+                }
+              } else {
+                //console.log(ast_stack)
+                try {
+                  ast_stack.at(-1).push(types.IfStatement(types.Identifier(get_slot_name(cmd_data[1])), types.BlockStatement([])));
+                  ast_stack.push(ast_stack.at(-1).at(-1).consequent.body)
+                } catch (error) {
+                  debuglog(`Pushing If node failed at ${lastRootFunction} with: "${error}"`, 1)
+                  debuglog(`Ast Tree Will Be Dumped, Attempting To Continue In Raw Mode`)
+                  errorLevel += 1;
+                  tempRaw = true;
+                  if (db_data.format !== undefined) {
+                      file.unshift(struct.pack(MODE + db_data.format, cmd_data))
+                    } else {
+                      file.unshift(cmd_data)
+                    }
+                    file.unshift(struct.pack(MODE + 'I', current_cmd))
+                  debuglog(error, 1)
+                }
+              };
+            } else {
+              tmp = get_slot_name(cmd_data[1])
+              try {
+                ast_stack.at(-1).push(types.IfStatement(
+                  types.UnaryExpression('!', types.Identifier(get_slot_name(cmd_data[1]))), 
+                  types.BlockStatement([])));
+                ast_stack.push(ast_stack.at(-1).at(-1).consequent.body)
+              } catch (error) {
+                  debuglog(`Pushing If node failed at ${lastRootFunction} with: "${error}"`, 1)
+                  debuglog(`Ast Tree Will Be Dumped, Attempting To Continue In Raw Mode`)
+                  if (db_data.format !== undefined) {
+                      file.unshift(struct.pack(MODE + db_data.format, cmd_data))
+                    } else {
+                      file.unshift(cmd_data)
+                    }
+                    file.unshift(struct.pack(MODE + 'I', current_cmd))
+                  tempRaw = true;
+                  errorLevel += 1;
+              }
+            }
+            break;
+
+          case 56: //else
+            let ifnode = ast_stack.at(-1).at(-1)
+            ifnode.alternate = types.BlockStatement([])
+            ast_stack.push(ifnode.alternate.body)
+            break;
           //case 18: //ifSlotSendToLabel
           //  break;
           //case 19: //ifNotSlotSendToLabel
@@ -415,35 +517,23 @@ async function parse_bbscript_routine(filename) {
           //case 49: //ModifyVar_
           //  break;
           //case 1: case 5: case 9: case 16: case 35: case 55: case 57: // Indentation End
-          //  break;
-          case 1: case 9: case 16:
+          case 1: case 5: case 9: case 16: case 55: case 57: //endState, endIf, endSubroutine, endUpon, endIfNot, endElse
             ast_stack.pop(); // Pop Temporary Node
             break;
           default: // Everything Else
-            //console.log(ast_stack) 
             try {
               ast_stack.at(-1).push(types.CallExpression(types.Identifier(db_data.name), sanitizer(current_cmd, cmd_data), babelOptions))
             } catch(error) {
-              debuglog(`Pushing To Last Function Body Failed, at ${current_cmd} with: ${error}`, 1)
+              debuglog(`Pushing To Last Function Body Failed at ${lastRootFunction} with: ${error}`, 1)
+              debuglog('AST Tree Will Be Dumped')
+              dumpTree = 1; 
             }
 
-            //ast_stack.at(-1).body.body.push(types.CallExpression(types.Identifier(db_data.name), sanitizer(current_cmd, cmd_data), babelOptions));
         }
-
-
-        //console.log(ast_stack[ast_stack.length-1])
-      
-    //console.log(ast_stack)
-
       }
-      
-    resolve(ast_root)
-    }
-      );
 
-    //ast_root = { body: ast_stack };
-
-
+      resolve(ast_root)
+    });
   });
 }
 
@@ -452,11 +542,15 @@ function parse_bbscript(filename, output_dir) {
   parse_bbscript_routine(filename).then(ast_root => {
     const output = path.resolve(output_dir, path.basename(filename, path.extname(filename)) + '.js')
 		const astOutput = path.resolve(output_dir, path.basename(filename, path.extname(filename)) + '_AST.json')
-    console.log(output)
-		if (dumpTree == 1) {
-			fs.writeFile(astOutput, JSON.stringify(ast_root, null, 2), { flag: 'w' } , err => {console.error(err)})
+		if (dumpTree == 1 || errorLevel >= 1) {
+			fs.writeFile(astOutput, JSON.stringify(ast_root, null, 2), { flag: 'w' } , err => { if (err){console.error(err)}})
 		}
-    fs.writeFile(output, generate(ast_root, {  }).code, { flag: 'w' }, err => {console.error(err)})
+    try {
+      fs.writeFile(output, generate(ast_root, babelOptions).code, { flag: 'w' }, err => {if (err) {console.error(err)}})
+    } catch (error) {
+      debuglog(`Parsing AST Failed With: ${error}`, 0)
+    }
+    console.log('complete')
   });
 }
 
@@ -474,5 +568,3 @@ if (args.length == 2) {
 } else {
   parse_bbscript(args[1], args[2]);
 }
-
-console.log('complete')

@@ -1,5 +1,7 @@
 scr_*\.*
 node_modules
 temp
+**.log
+**.bak
 **.pac
 /*.json

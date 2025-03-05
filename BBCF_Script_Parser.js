@@ -253,9 +253,8 @@ function parse_bbscript_routine(filename) {
     
     let file = fs.createReadStream(filename, { highWaterMark: streamSize })
 
-    let ast_root = types.Program([]);
-    console.log(JSON.stringify(ast_root))
-    let ast_stack = ast_root.body;
+    let ast_root = types.File(types.Program([])); // i have no idea why, but traverse() shits itself if this is just a Program  
+    let ast_stack = ast_root.program.body;
     let astor_handler = [];
     let FUNCTION_COUNT = 0;
     let lastRootFunction = 'Root';
@@ -532,7 +531,21 @@ function parse_bbscript_routine(filename) {
 
         }
       }
+      // Change instances of else { if } with no extra functions to else if
 
+      try {
+        traverse(ast_root, {
+          IfStatement(path){
+            console.log(path.node.alternate)
+            if (path.node.alternate && types.isIfStatement(path.node.alternate.body[0]) && path.node.alternate.body.length == 1) {
+              alternateIf = path.node.alternate.body[0];
+              path.node.alternate = alternateIf;
+            }
+          }
+        })
+      } catch(err) {
+        debuglog(`Creating Else If Statements Failed With: ${err}`, 1)
+      }
       resolve(ast_root)
     });
   });

@@ -430,8 +430,6 @@ function parse_bbscript_routine(filename) {
                 arcsysdoubleifspaghetti = true;
               }
 
-              //debuglog(typeof arcsysdoubleifspaghetti);
-              //debuglog(typeof ast_stack.at(-1).at(-1));
               if (typeof arcsysdoubleifspaghetti === 'object') {
                 try {
                     tmp = arcsysdoubleifspaghetti.test

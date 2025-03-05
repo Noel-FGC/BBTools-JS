@@ -23,13 +23,9 @@ const babelOptions = {
 	numericSeparator: false,
 };
 
-console.log(args)
 
 for (let i = 0; i < args.length; i++) {
   let arg = args[i]
-	console.log(i)
-	console.log(args)
-	console.log(arg)
 	let targs = JSON.parse(JSON.stringify(args))
   if (!arg.startsWith('-')) {
     continue;
@@ -104,8 +100,6 @@ function debuglog (log, level = 3) {
     }
   }
 }
-
-console.log(args)
 
 debuglog(`args:` + ogargs)
 debuglog(`streamSize: ${streamSize}`)
@@ -282,7 +276,6 @@ function parse_bbscript_routine(filename) {
           //console.log('Dude what the fuck are you parsing?')
           debuglog('ReadStream Not Big Enough To Parse Command, The Stream Size Limit Can Be Altered With --streamsize, Be Careful To Not Set It Too High.', 0);
           debuglog('Tell Noel To Stop Being A Lazy Ass And Actually Figure Out How Streams Work')
-          console.log(current_cmd)
           file.unshift(struct.pack(MODE + "I", current_cmd))
           file.close()
           break;
@@ -536,7 +529,6 @@ function parse_bbscript_routine(filename) {
       try {
         traverse(ast_root, {
           IfStatement(path){
-            console.log(path.node.alternate)
             if (path.node.alternate && types.isIfStatement(path.node.alternate.body[0]) && path.node.alternate.body.length == 1) {
               alternateIf = path.node.alternate.body[0];
               path.node.alternate = alternateIf;

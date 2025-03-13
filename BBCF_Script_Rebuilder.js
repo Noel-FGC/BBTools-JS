@@ -501,7 +501,7 @@ function rebuild_bbscript(filename, output_dir) {
       fs.writeFile(astOutput, JSON.stringify(ast, null, 2), (err) => { if (err) {console.error(err)}})
     }
 
-		console.log(output_buffer)
+		//console.log(output_buffer)
 		fs.writeFile(output, output_buffer, (err) => {if (err) { console.error(err)}})
 
     //output_buffer.end();

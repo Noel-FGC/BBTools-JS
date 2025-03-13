@@ -410,7 +410,7 @@ class Rebuilder {
   visit_IfStatement(node) { // visit_if
     let begin_id = 0
     let end_id = 0
-    let slot = 4543058 // ERR
+    let slot = 5395013 // will appear as ERR in a hex editor
     if (node.test.type == "Identifier") {
       begin_id = 4
       end_id = 5

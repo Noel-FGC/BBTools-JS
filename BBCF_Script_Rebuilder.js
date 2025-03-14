@@ -6,7 +6,6 @@ const struct = require('python-struct');
 const { types, parseSync } = require('@babel/core');
 const traverse = require('@babel/traverse').default;
 const util = require ('util');
-const readLine = require('readline');
 
 const encoder = new TextEncoder();
 
@@ -147,7 +146,6 @@ let named_direction_lookup = {}
 for (command in command_db) {
   //console.log(command)
   db_data = command_db[command]
-  //readLine.createInterface({ input: process.stdin, output: process.stdout })
   if (db_data.name) {
     command_db_lookup[db_data.name.toLowerCase()] = db_data
     command_db_lookup[db_data.name.toLowerCase()].id = command;

@@ -269,7 +269,7 @@ function write_command_by_id(id, params = []) {
     if (my_params.length > 1) {
       write(struct.pack(MODE + cmd_data.format, my_params))
     } else {
-      write(struct.pack(MODE + cmd_data.format, my_params.join())) // idk why i cant just do 
+      write(struct.pack(MODE + cmd_data.format, my_params.join())) // idk why i cant just do [0] 
     }
   } else {
     write(encoder.encode(my_params[0]))

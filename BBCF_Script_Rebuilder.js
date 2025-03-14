@@ -359,7 +359,6 @@ class Rebuilder {
       end_id = 1
 			let start_offset = (output_buffer.length - root._dataStart)
 			let tempBuf = struct.pack(MODE + "I", start_offset)
-      //console.log(node._index)
 			tempBuf.copy(output_buffer, (4 + 36 * node._index + 32))
 		} else if (getFunctionType(node.params) == 'subroutine') {
       begin_id = 8
@@ -367,6 +366,10 @@ class Rebuilder {
     } else {
       debuglog('Unsupported Function Type "' + getFunctionType(node.params) + '" Found At Line: ' + node.loc.start.line, 0)
     }
+    node.id.name = node.id.name.replace('__sp__', ' ')
+                               .replace('__qu__', '?')
+                               .replace('__ds__', '-')
+                               .replace('__at__', '@')
     write_command_by_id(begin_id, [ types.StringLiteral(node.id.name) ])
     this.visit_body(node.body.body)
     write_command_by_id(end_id)

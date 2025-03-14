@@ -414,9 +414,6 @@ class Rebuilder {
       end_id = 5
       //console.log(node.test.name)
       slot = decode_slot(node.test.name)
-      if (slot == 0) {
-        console.log(node.test.name)
-      }
     } else if (node.test.type == "UnaryExpression") {
       begin_id = 54
       end_id = 55
@@ -433,15 +430,7 @@ class Rebuilder {
 
     if (node.alternate !== null) {
       write_command_by_id(56)
-      if (node.alternate.type == 'BlockStatement') {
-        this.visit(node.alternate)
-      } else if (node.alternate.type == 'IfStatement') {
-        this.visit_IfStatement(node.alternate)
-      } else if (node.alternate.type == 'CallExpression') {
-        this.visit_CallExpression(node.alternate)
-      } else {
-        console.log('Unsupported If Statement Alternate At Line: ' + node.alternate.loc.start.line)
-      }
+      this.visit(node.alternate)
       write_command_by_id(57)
     }
 

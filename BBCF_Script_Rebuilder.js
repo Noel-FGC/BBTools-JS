@@ -226,6 +226,10 @@ function write_command_by_id(id, params = []) {
   //console.log(params)
 
   for ([index, param] of params.entries()) {
+    if (!(param instanceof Object)) {
+      my_params[index] = param
+      continue;
+    };
     if (param.type == "StringLiteral") {
       my_params[index] = param.value;
       //console.log(param.value);
@@ -370,7 +374,7 @@ class Rebuilder {
                                .replace('__qu__', '?')
                                .replace('__ds__', '-')
                                .replace('__at__', '@')
-    write_command_by_id(begin_id, [ types.StringLiteral(node.id.name) ])
+    write_command_by_id(begin_id, [ node.id.name ])
     this.visit(node.body)
     write_command_by_id(end_id)
   }
@@ -399,7 +403,7 @@ class Rebuilder {
       end_id = 16
       let upon = decode_upon(node.id.name)
       //console.log(node.id.name + ' ' + upon)
-      write_command_by_id(begin_id, [ types.NumericLiteral(upon) ] )
+      write_command_by_id(begin_id, [ upon ] )
       this.visit(node.body)
       write_command_by_id(end_id)
     }
@@ -424,7 +428,7 @@ class Rebuilder {
 
     //console.log(slot)
 
-    write_command_by_id(begin_id, [ types.NumericLiteral(2), types.NumericLiteral(slot) ])
+    write_command_by_id(begin_id, [ 2, slot ])
     this.visit(node.consequent)
     write_command_by_id(end_id)
 

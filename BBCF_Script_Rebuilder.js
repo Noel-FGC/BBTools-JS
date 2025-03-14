@@ -371,7 +371,7 @@ class Rebuilder {
                                .replace('__ds__', '-')
                                .replace('__at__', '@')
     write_command_by_id(begin_id, [ types.StringLiteral(node.id.name) ])
-    this.visit_body(node.body.body)
+    this.visit(node.body)
     write_command_by_id(end_id)
   }
   visit_CallExpression(node) { // visit_Call
@@ -400,7 +400,7 @@ class Rebuilder {
       let upon = decode_upon(node.id.name)
       //console.log(node.id.name + ' ' + upon)
       write_command_by_id(begin_id, [ types.NumericLiteral(upon) ] )
-      this.visit_body(node.body.body)
+      this.visit(node.body)
       write_command_by_id(end_id)
     }
     
@@ -428,13 +428,13 @@ class Rebuilder {
     //console.log(slot)
 
     write_command_by_id(begin_id, [ types.NumericLiteral(2), types.NumericLiteral(slot) ])
-    this.visit_body(node.consequent.body)
+    this.visit(node.consequent)
     write_command_by_id(end_id)
 
     if (node.alternate !== null) {
       write_command_by_id(56)
       if (node.alternate.type == 'BlockStatement') {
-        this.visit_body(node.alternate.body)
+        this.visit(node.alternate)
       } else if (node.alternate.type == 'IfStatement') {
         this.visit_IfStatement(node.alternate)
       } else if (node.alternate.type == 'CallExpression') {
@@ -461,9 +461,9 @@ class Rebuilder {
   visit_Compare(node) {
 
   }
-  visit_body(nodebody) {
+  visit_BlockStatement(node) { // visit_body
     try {
-      nodebody.forEach(childNode => {
+      node.body.forEach(childNode => {
         this.visit(childNode)
       })
     } catch (error) {

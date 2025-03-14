@@ -16,6 +16,7 @@ let logfile;
 let errorLevel = 0;
 let raw = false;
 let tempRaw = false;
+let elseCleanType = 'if';
 
 const babelOptions = {};
 
@@ -70,11 +71,17 @@ for (let i = 0; i < args.length; i++) {
       debugLevel = 2;
     }
   }
+
+  else if (arg.toLowerCase() == '--else-clean-type' || arg == '-e') {
+    args.splice(i, 1)
+    elseCleanType = args.splice(i, 1)
+    i--
+  }
 	i--
 }
 
-function debuglog (log, level = 3) {
-  if (debugLevel >= level) {
+function debuglog (log, level = 3, forceDisplay = 0) {
+  if (debugLevel >= level || forceDisplay) {
     let debugString = ''
     if (level == 0) {
       debugString = 'CRITICAL'
@@ -519,13 +526,14 @@ function parse_bbscript_routine(filename) {
         }
       }
       // Change instances of else { if } with no extra functions to else if
-
       try {
         traverse(ast_root, {
           IfStatement(path){
-            if (path.node.alternate && types.isIfStatement(path.node.alternate.body[0]) && path.node.alternate.body.length == 1) {
-              alternateIf = path.node.alternate.body[0];
-              path.node.alternate = alternateIf;
+            if (path.node.alternate && path.node.alternate.body.length == 1) {
+              if ((elseCleanType == 'if' && types.isIfStatement(path.node.alternate.body[0])) || elseCleanType == 'all') {
+                path.node.alternate.body[0];
+                path.node.alternate = path.node.alternate.body[0];
+              }
             }
           }
         })
@@ -550,7 +558,7 @@ function parse_bbscript(filename, output_dir) {
     } catch (error) {
       debuglog(`Parsing AST Failed With: ${error}`, 0)
     }
-    console.log('complete')
+    debuglog('complete', 3, 1)
   });
 }
 
@@ -559,7 +567,7 @@ if (!([2, 3].includes(args.length)) || path.extname(args[1]) != ".bin") {
   console.log("Usage:node BBCF_Script_Parser.js scr_xx.bin outdir [options]")
   console.log("Default output directory if left blank is the input files directory.")
 	console.log("options:\n")
-	console.log("-D | --dumptree\n-d | --debug [level]\n-s | --streamsize {size[unit]}")
+	console.log("-D | --dumptree\n-d | --debug [level]\n-s | --streamsize {size[unit]}\n -e | --else-clean-type {if/all/none}")
 	console.log("streamsize unit can be kb, mb, or gb, if not specified it will assume the number is bytes")
   process.exit(1)
 }

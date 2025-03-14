@@ -4,7 +4,8 @@ const struct = require('python-struct');
 const generate = require('@babel/generator').default;
 const { types } = require('@babel/core');
 const traverse = require('@babel/traverse').default;
-const util = require ('util');
+const util = require('util');
+const prettier = require('@prettier/sync');
 
 let args = process.argv.slice(1);
 let ogargs = JSON.stringify(args)
@@ -545,7 +546,7 @@ function parse_bbscript(filename, output_dir) {
 			fs.writeFile(astOutput, JSON.stringify(ast_root, null, 2), { flag: 'w' } , err => { if (err){console.error(err)}})
 		}
     try {
-      fs.writeFile(output, generate(ast_root, babelOptions).code, { flag: 'w' }, err => {if (err) {console.error(err)}})
+      fs.writeFile(output, prettier.format(generate(ast_root, babelOptions).code, { semi: true, parser: 'babel'}), { flag: 'w' }, err => {if (err) {console.error(err)}})
     } catch (error) {
       debuglog(`Parsing AST Failed With: ${error}`, 0)
     }

@@ -21,12 +21,7 @@ let unkString = 'Unknown'
 let uponString = 'upon_'
 let slotString = 'SLOT_'
 
-const babelOptions = {
-	comments: false,
-	retainLines: false,
-	compact: false,
-	numericSeparator: false,
-};
+const babelOptions = {};
 
 for (let i = 0; i < args.length; i++) {
   let arg = args[i]

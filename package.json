@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "@babel/core": "7.26.9",
+    "@babel/generator": "7.26.9",
+    "@babel/traverse": "7.26.9",
+    "@prettier/sync": "0.5.2",
+    "minimist": "1.2.8",
+    "nexe": "5.0.0-beta.4",
+    "python-struct": "1.1.3"
+  }
+}

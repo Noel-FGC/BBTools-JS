@@ -5,3 +5,5 @@ temp
 **.bak
 **.pac
 /*.json
+!package.json
+bin

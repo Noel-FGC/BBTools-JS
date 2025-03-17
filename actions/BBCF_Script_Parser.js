@@ -558,7 +558,7 @@ function parse_bbscript(filename, output_dir) {
     } catch (error) {
       debuglog(`Parsing AST Failed With: ${error}`, 0)
     }
-    debuglog('complete', 3, 1)
+    debuglog('complete', 3, true)
   });
 }
 

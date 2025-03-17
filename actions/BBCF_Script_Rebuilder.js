@@ -494,7 +494,7 @@ function rebuild_bbscript(filename, output_dir) {
 		fs.writeFile(output, output_buffer, (err) => {if (err) { console.error(err)}})
 
     //output_buffer.end();
-    console.log('complete')
+    debugLog('complete', 3, true)
   }
 }
 

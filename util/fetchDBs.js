@@ -38,7 +38,7 @@ function fetchDBs(char) {
     } catch (e) {
       debugLog('Loading ' + db.name + ' failed with error: ' + e, 1)
     }
-    debugLog(db.name + ': ' + JSON.stringify(dbObject[db]), 5)
+    debugLog(db.name + ': ' + JSON.stringify(dbObject[db.name], null, 2), 5)
  
     try {
       if (char) {

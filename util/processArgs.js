@@ -4,11 +4,15 @@ const defaultOpts = {
     short: 'd',
     type: 'number',
     default: 1,
-    boolDefault: 3
+    boolDefault: 3,
+    usage: '[Level]',
+    description: 'Sets the debug level, and creates a log file, level can range from 1-5'
   },
   help: {
     long: 'help',
-    default: false
+    default: false,
+    usage: '[Action]',
+    description: 'Displays A Help Menu'
   }
 }
 

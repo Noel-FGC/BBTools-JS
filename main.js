@@ -56,7 +56,7 @@ debugLog('CLI Arguments Processed Succesfully')
 
 if (actions[action] === undefined) printHelpMenu();
 
-debugLog('Attempting Action: "' + action + '" Using: ' + actions[action])
+debugLog('Attempting Action: "' + action + '" Using: ' + actions[action].path)
 
 const actionModule = require(actions[action].path)
 const actionFunction = actionModule[action]

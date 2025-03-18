@@ -13,7 +13,8 @@ let argObj = require('../util/processArgs.js')({
     short: 'D',
     long: 'dumptree',
     type: 'boolean',
-    default: 'false'
+    default: 'false',
+    description: 'Dump AST tree to scr_xx_AST.json'
   },
   elseCleanType: {
     short: 'e',

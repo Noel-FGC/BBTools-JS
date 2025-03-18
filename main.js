@@ -1,15 +1,16 @@
 const path = require('node:path')
 const actions = {
-  Parse: './actions/BBCF_Script_Parser.js',
-  Rebuild: './actions/BBCF_Script_Rebuilder.js',
-  List: './actions/Get_Function_List.js'
+  Parse: { path: './actions/BBCF_Script_Parser.js', handles: '.bin' },
+  Rebuild: { path: './actions/BBCF_Script_Rebuilder.js', handles: '.js' },
+  List: { path: './actions/Get_Function_List.js' }
 }
 const debugLog = require('./util/debugLog.js')
 
 function printHelpMenu(action) {
   if (action) {
-    const { usageString, optString } = require(actions[action])
-    console.log('Usage: ' + path.basename(__filename) + ' ' + action + usageString)
+    const { usageString, optString } = require(actions[action].path)
+    console.log('Usage: ' + path.basename(__filename) + ' ' + action + ' ' + usageString + '\n')
+    console.log('\nOptions:\n')
     console.log(optString)
   } else {
     console.log(`
@@ -37,7 +38,19 @@ if (args.help.value) {
   }
 }
 
-let action = args._[1]
+let action
+let passArgs
+
+if (actions[args._[1]] !== undefined) {
+  action = args._[1]
+  passArgs = args._.slice(1)
+} else {
+  for (entry in Object.keys(actions)) {
+    if (args._[1].endsWith(actions[entry].handles)) {
+      action = entry;
+    }
+  }
+}
 
 debugLog('CLI Arguments Processed Succesfully')
 
@@ -45,3 +58,11 @@ if (actions[action] === undefined) printHelpMenu();
 
 debugLog('Attempting Action: "' + action + '" Using: ' + actions[action])
 
+const actionModule = require(actions[action].path)
+const actionFunction = actionModule[action]
+
+const returnValue = actionFunction(args._.slice(1));
+
+if (returnValue == 'Invalid Args') {
+  printHelpMenu(action)
+}

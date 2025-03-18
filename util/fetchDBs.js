@@ -22,14 +22,12 @@ function fetchDBs(char) {
   if (char) debugLog('Fetching DB\'s for character ' + char);
   else debugLog('Fetching global DB\'s', 3);
 
-
-
   for (dbIndex in dbs) {
     try {
       db = dbs[dbIndex]
-      if (fs.exists(path.join(__dirname, game, db.path), (e) => { if (e) debugLog(e, 1)})) { 
-        debugLog('Loading ' + db.name + ' From ' + path.join(__dirname, game, db.path), 4)
-        dbObject[db.name] = require(path.join(__dirname, game, db.path))
+      if (fs.existsSync(path.resolve(__dirname, '..', 'static_db', game, db.path), (e) => { if (e) debugLog(e, 1)})) { // .. is needed because for some reason nexe includes /util/ in the __dirname var
+        debugLog('Loading ' + db.name + ' From ' + path.resolve(__dirname, '..', 'static_db', game, db.path), 4)
+        dbObject[db.name] = require(path.resolve(__dirname, '..', 'static_db', game, db.path))
       }
       else { 
         debugLog('Loading Internal ' + db.name + ' From ' + path.join('../assets/static_db', game, db.path), 4)
@@ -43,9 +41,9 @@ function fetchDBs(char) {
     try {
       if (char) {
         let dbPath = db.path.replace('global', char)
-        if (fs.exists(path.join(__dirname, game, dbPath), (e) => { if (e) debugLog(e, 1)})) {
-          debugLog('Loading Character ' + db.name + ' From ' + path.join(__dirname, game, dbPath), 4)
-          let charDB = require(path.join(__dirname, game, dbPath))
+        if (fs.existsSync(path.join(__dirname, '../static_db', game, dbPath), (e) => { if (e) debugLog(e, 1)})) {
+          debugLog('Loading Character ' + db.name + ' From ' + path.join(__dirname, '../static_db', game, dbPath), 4)
+          let charDB = require(path.join(__dirname, '../static_db', game, dbPath))
 
           debugLog('Applying Character ' + db.name + ' to Main Object', 4)
           dbObject[db.name] = Object.assign({}, dbObject[db.name], charDB)

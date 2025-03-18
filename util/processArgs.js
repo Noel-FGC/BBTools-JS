@@ -20,7 +20,7 @@ function processArgs(opts, noError = false) {
   opts = Object.assign(opts, defaultOpts);
   const argObj = require('minimist')(process.argv.slice(1))
   for (entry in argObj) {
-    if (entry == '_') continue;
+    if (entry == '_' || entry.disabled) continue;
     if (entry.length > 1 && entry.toLowerCase() != entry) {
       argObj[entry.toLowerCase()] = argObj[entry]
       delete argObj[entry]

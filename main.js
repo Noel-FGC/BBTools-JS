@@ -30,9 +30,12 @@ debugLog('Processing CLI Arguments', 3)
 const args = require('./util/processArgs.js')({}, true)
 debugLog(JSON.stringify(args, null, 2), 4)
 
-if (args._.length < 2) printHelpMenu();
-
-if (args.help.value) { 
+if (args._.length < 2) {
+  if (typeof args.help.value == 'string') printHelpMenu(args.help.value)
+  printHelpMenu();
+}
+//console.log(args.help.value)
+if (args.help.value) {
   if (typeof args.help.value == 'string' && actions[args.help.value] !== undefined) {
     printHelpMenu(args.help.value)
   } else {
@@ -42,6 +45,7 @@ if (args.help.value) {
 
 let action
 
+if (args._[1] == 'help') printHelpMenu(args._[2])
 
 if (actions[args._[1]] !== undefined) {
   action = args._[1]
@@ -54,6 +58,7 @@ if (actions[args._[1]] !== undefined) {
     }
   }
 }
+
 
 debugLog('CLI Arguments Processed Succesfully')
 

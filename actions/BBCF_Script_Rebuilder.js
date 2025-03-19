@@ -25,13 +25,34 @@ let argObj = require('../util/processArgs.js')({
     description: 'Dump raw interpreted BBScript function calls after parsing js',
     disabled: true
   },
+  unknownFunctionString: {
+    short: 'f',
+    long: 'unknown-function-string',
+    type: 'string',
+    description: 'Sets the string used to determine Unknown BBScript function calls',
+    default: 'Unknown',
+    disabled: true
+  },
+  uponString: {
+    short: 'u',
+    long: 'uponstring',
+    type: 'string',
+    description: 'Sets the string used to determine Unknown upons',
+    default: 'upon_',
+    disabled: true
+  },
+  slotString: {
+    short: 's',
+    long: 'slotstring',
+    type: 'string',
+    description: 'Sets the string used to determine Unknown slots',
+    default: 'SLOT_',
+    disabled: true
+  }
 })
 
 let logfile;
 let errorLevel = 0;
-let unkString = 'Unknown'
-let uponString = 'upon_'
-let slotString = 'SLOT_'
 
 const babelOptions = {};
 
@@ -50,10 +71,10 @@ function write(buf) {
 
 function decode_upon(argString) {
   string = argString.toLowerCase()
-  if (!string.includes(uponString.toLowerCase())) {
-    debugLog('Passed Upon String Did Not Contain ' + uponString, 0);
+  if (!string.includes(argObj.uponString.value.toLowerCase())) {
+    debugLog('Passed Upon String Did Not Contain ' + argObj.uponString.value, 0);
   }
-  string = string.replace(uponString.toLowerCase(), '')
+  string = string.replace(argObj.uponString.value.toLowerCase(), '')
 
   if(parseInt(string)) {
     return parseInt(string);
@@ -70,10 +91,10 @@ function decode_upon(argString) {
 
 function decode_slot(argString) {
   string = argString.toLowerCase()
-  if (!string.startsWith(slotString.toLowerCase())) {
-    debugLog('Passed SLOT String Did Not Contain' + slotString, 0)
+  if (!string.startsWith(argObj.slotString.value.toLowerCase())) {
+    debugLog('Passed SLOT String Did Not Contain' + argObj.slotString.value, 0)
   } 
-  string = string.replace(slotString.toLowerCase(), '')
+  string = string.replace(argObj.slotString.value.toLowerCase(), '')
   for (entry in dbObj.slotDB) {
     if (dbObj.slotDB[entry].toLowerCase() === string) {
       return parseInt(entry);
@@ -149,7 +170,7 @@ function write_command_by_id(id, params = []) {
 function getFunctionType(params, name = 'MatchInit') {
   //console.log(params)
   if (params.length == 0) {
-    if (name.toLowerCase().startsWith(uponString.toLowerCase())) {
+    if (name.toLowerCase().startsWith(argObj.uponString.value.toLowerCase())) {
       return 'upon'
     }
   }
@@ -166,7 +187,7 @@ function getFunctionType(params, name = 'MatchInit') {
     if (identifierNode.name !== undefined) {
       return identifierNode.name.toLowerCase()
     }
-  } else if (name.toLowerCase().startsWith(uponString.toLowerCase())) {
+  } else if (name.toLowerCase().startsWith(argObj.uponString.value.toLowerCase())) {
     return 'upon'
   }
 
@@ -253,8 +274,8 @@ class Rebuilder {
     let name = node.callee.name.toLowerCase()
     if ([ '_if', '_else'].includes(name)) name = name.slice(1)
     let cmd_id = 0;
-    if (node.callee.name.startsWith(unkString.toLowerCase())) {
-			cmd_id = name.replace(unkString.toLowerCase(), "");
+    if (node.callee.name.startsWith(argObj.unknownFunctionString.value.toLowerCase())) {
+			cmd_id = name.replace(argObj.unknownFunctionString.value.toLowerCase(), "");
 		} else if (dbObj.commandDB_lookup[name] !== undefined) {
 			cmd_id = dbObj.commandDB_lookup[name].id
 		} else {
@@ -460,8 +481,8 @@ for (command in dbObj.commandDB) {
     dbObj.commandDB_lookup[db_data.name.toLowerCase()] = db_data
     dbObj.commandDB_lookup[db_data.name.toLowerCase()].id = command;
   }
-  dbObj.commandDB_lookup[unkString.toLowerCase() + command] = db_data
-  dbObj.commandDB_lookup[unkString.toLowerCase() + command].id = command;
+  dbObj.commandDB_lookup[argObj.unknownFunctionString.value.toLowerCase() + command] = db_data
+  dbObj.commandDB_lookup[argObj.unknownFunctionString.value.toLowerCase() + command].id = command;
 }
 
 for (value in dbObj.moveInputs) {

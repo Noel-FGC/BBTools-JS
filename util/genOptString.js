@@ -17,6 +17,9 @@ function genOptString(argObj) {
     if (argObj[opt].description) {
       string += ('\n    ' + argObj[opt].description + '\n')
     }
+    if (argObj[opt].default && argObj[opt].type != 'boolean') {
+      string += ('\n    Default: ' + argObj[opt].default + '\n')
+    }
 
     string += '\n';
   }

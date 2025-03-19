@@ -1,7 +1,7 @@
 function genOptString(argObj) {
   let string = '';
   for (opt in argObj) {
-    if (opt === '_' || opt.disabled) continue;
+    if (opt === '_' || argObj[opt].disabled) continue;
     //console.log(argObj[opt].short)
     if (argObj[opt].short) {
       string += ('-' + argObj[opt].short)

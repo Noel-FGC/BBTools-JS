@@ -250,7 +250,7 @@ function parse_bbscript_routine(filename) {
             ast_stack.at(-1).push(types.FunctionDeclaration(types.Identifier(get_upon_name(cmd_data[0])), [], types.BlockStatement([])))
             ast_stack.push(ast_stack.at(-1).at(-1).body.body)
             } catch (error) {
-              //debugLog(error, 1)
+              debugLog(error, 1)
             }
             break;
 

@@ -6,4 +6,5 @@ temp
 **.pac
 /*.json
 !package.json
+!package-lock.json
 bin

@@ -13,6 +13,20 @@ const defaultOpts = {
     default: false,
     usage: '[Action]',
     description: 'Displays A Help Menu'
+  },
+  endian: {
+    long: 'endian',
+    default: '<',
+    type: 'string',
+    usage: '<Endian>',
+    description: '< or >'
+  },
+  game: {
+    long: 'game',
+    short: 'g',
+    default: 'BBCF',
+    type: 'string',
+    description: 'Game acronym to use when loading files, currently only BBCF is supported'
   }
 }
 

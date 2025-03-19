@@ -42,7 +42,7 @@ let errorLevel = 0;
 
 const babelOptions = {};
 
-let MODE = "<"
+let MODE = argObj.endian.value
 
 function find_named_value(command, value) {
   let str_value = value.toString()

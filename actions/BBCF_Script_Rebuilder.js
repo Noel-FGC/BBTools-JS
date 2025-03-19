@@ -56,7 +56,7 @@ let errorLevel = 0;
 
 const babelOptions = {};
 
-const MODE = "<"
+const MODE = argObj.endian.value
 
 
 //console.log(dbObj.named_value_lookup)

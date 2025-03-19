@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const debugLog = require('./debugLog.js')
 
-const game = "BBCF"
+const game = require('./processArgs.js')().game.value
 
 let dbObject = {};
 

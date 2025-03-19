@@ -31,17 +31,8 @@ let argObj = require('../util/processArgs.js')({
     default: false,
     description: 'Print raw BBScript function calls without wrapping as js'
   },
-  streamSize: {
-    short: 's',
-    long: 'streamsize',
-    type: 'number',
-    default: 2000000,
-    usage: '<Size>',
-    description: 'Size (in bytes), the Parser should read, will be removed soon'
-  }
 })
 
-const streamSize = argObj.streamSize.value;
 const dumpTree = argObj.dumpTree.value;
 const raw = argObj.raw.value;
 let elseCleanType = argObj.elseCleanType
@@ -189,8 +180,7 @@ function parse_bbscript_routine(filename) {
       let cmd_data = [];
       if (file.readableLength < struct.sizeOf(db_data.format) || file.readableLength < db_data.size - 4) {
         //console.log('Dude what the fuck are you parsing?')
-        debugLog('ReadStream Not Big Enough To Parse Command, The Stream Size Limit Can Be Altered With --streamsize, Be Careful To Not Set It Too High.', 0);
-        debugLog('Tell Noel To Stop Being A Lazy Ass And Actually Figure Out How Streams Work')
+        debugLog('Buffer Not Big Enough To Parse Command', 0);
         file.unshift(struct.pack(MODE + "I", current_cmd))
         file.close()
         break;

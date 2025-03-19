@@ -392,7 +392,7 @@ function parse_bbscript_routine(filename) {
           case 56: //else
             let ifnode = ast_stack.at(-1).at(-1)
             ifnode.alternate = types.BlockStatement([])
-            ast_stack.push(ifnode.alternate.body)
+              ast_stack.push(ifnode.alternate.body)
             break;
           //case 18: //ifSlotSendToLabel
           //  break;
@@ -406,10 +406,58 @@ function parse_bbscript_routine(filename) {
           //  break;
           //case 40: //operation
           //  break;
-          //case 41: //StoreValue
-          //  break;
-          //case 49: //ModifyVar_
-          //  break;
+          case 41: //StoreValue
+            (function() { // put this in a function because letting leftValue and rightValue for some reason conflicts with ModifyVar
+              let leftValue = 0;
+              let rightValue = 0;
+
+              if (cmd_data[0] > 0) leftValue = types.Identifier(get_slot_name(cmd_data[1]));
+              else leftValue = types.NumericLiteral(cmd_data[1])
+
+              if (cmd_data[2] > 0) rightValue = types.Identifier(get_slot_name(cmd_data[3]));
+              else rightValue = types.NumericLiteral(cmd_data[3])
+
+              ast_stack.at(-1).push(types.AssignmentExpression('=', leftValue, rightValue))
+            })();
+            break;
+
+          case 49: //ModifyVar_
+            if (![0, 1, 2, 3].includes(cmd_data[0])) {
+              ast_stack.at(-1).push(types.CallExpression(types.Identifier(db_data.name), sanitizer(current_cmd, cmd_data), babelOptions))
+              break;
+            }
+
+            let operation = '>>>';
+            let leftValue = 0;
+            let rightValue = 0;
+
+
+            if (cmd_data[1] > 0) leftValue = types.Identifier(get_slot_name(cmd_data[2]));
+            else leftValue = types.NumericLiteral(cmd_data[2]);
+            
+            if (cmd_data[3] > 0) rightValue = get_slot_name(cmd_data[4]);
+            else rightValue = types.NumericLiteral(cmd_data[4]);
+
+            switch (cmd_data[0]) {
+              case 0: // Add
+                operation = '+'
+                break;
+              case 1: // Subtract
+                operation = '-'
+                break;
+              case 2: // Multiply
+                operation = '*'
+                break;
+              case 3: // Divide
+                operation = '/'
+                break;
+            }
+
+            let expression = types.BinaryExpression(operation, leftValue, rightValue)
+
+            ast_stack.at(-1).push(types.AssignmentExpression('=', leftValue, expression))
+            
+            break;
           //case 1: case 5: case 9: case 16: case 35: case 55: case 57: // Indentation End
           case 1: case 5: case 9: case 16: case 55: case 57: //endState, endIf, endSubroutine, endUpon, endIfNot, endElse
             ast_stack.pop(); // Pop Temporary Node
@@ -430,7 +478,7 @@ function parse_bbscript_routine(filename) {
         traverse(ast_root, {
           IfStatement(path){
             if (path.node.alternate && path.node.alternate.body.length == 1) {
-              if ((elseCleanType == 'if' && types.isIfStatement(path.node.alternate.body[0])) || elseCleanType == 'all') {
+              if ((argObj.elseCleanType.value == 'if' && types.isIfStatement(path.node.alternate.body[0])) || argObj.elseCleanType.value == 'all') {
                 path.node.alternate.body[0];
                 path.node.alternate = path.node.alternate.body[0];
               }

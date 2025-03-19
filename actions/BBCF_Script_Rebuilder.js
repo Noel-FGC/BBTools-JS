@@ -4,172 +4,45 @@ const fs = require('node:fs');
 const path = require('node:path');
 const struct = require('python-struct');
 const { types, parseSync } = require('@babel/core');
-const traverse = require('@babel/traverse').default;
-const util = require ('util');
+const util = require('util');
+const debugLog = require('../util/debugLog.js');
 
 const encoder = new TextEncoder();
 
-let args = process.argv.slice(1);
-let ogargs = JSON.stringify(args)
-let debugLevel = 1;
-let dumpTree = 0;
+let argObj = require('../util/processArgs.js')({
+  dumpTree: {
+    short: 'D',
+    long: 'dumptree',
+    type: 'boolean',
+    default: 'false',
+    description: 'Dump AST tree to scr_xx_AST.json'
+  },
+  raw: {
+    short: 'r',
+    long: 'raw',
+    type: 'boolean',
+    default: false,
+    description: 'Dump raw interpreted BBScript function calls after parsing js',
+    disabled: true
+  },
+})
+
 let logfile;
 let errorLevel = 0;
-let raw = false;
 let unkString = 'Unknown'
 let uponString = 'upon_'
 let slotString = 'SLOT_'
 
 const babelOptions = {};
 
-for (let i = 0; i < args.length; i++) {
-  let arg = args[i]
-	let targs = JSON.parse(JSON.stringify(args))
-  if (!arg.startsWith('-')) {
-    continue;
-  }
-
-  if (arg.toLowerCase() == '--raw' || arg == '-r') {
-    raw = true
-    args.splice(i, 1)
-  }
-
-
-	else if (arg.toLowerCase() == '--dumptree' || arg == '-D') {
-		args.splice(i, 1)
-		dumpTree = 1
-	}
-
-  else if (arg.toLowerCase() == '--debug' || arg == '-d') {
-    args.splice(i, 1)
-    logfile = path.resolve(__dirname + '/BBCF_Script_Rebuilder.log');
-		if (fs.existsSync(logfile + '.bak')) {
-			fs.unlink(logfile + '.bak', (err) => {if (err) {console.error(err)}});
-		}
-		if (fs.existsSync(logfile)) {
-			fs.rename(logfile, logfile + '.bak', (err) => { if (err){console.error(err)}})
-		}
-    if (!isNaN(parseInt(args[i]))) {
-      debugLevel = parseInt(args.splice([i]));
-      i--
-    } else {
-      debugLevel = 2;
-    }
-  }
-	i--
-}
-
-function debuglog (log, level = 3) {
-  if (debugLevel >= level) {
-    let debugString = ''
-    let cmd = 'log'
-    if (level == 0) {
-      debugString = 'CRITICAL'
-      cmd = 'error'
-    } if (level == 1) {
-      debugString = 'ERROR'
-      cmd = 'error'
-    } if (level == 2) {
-      debugString = 'WARNING'
-      cmd = 'warn'
-    } if (level >= 3) {
-      debugString = 'INFO'
-    }
-
-		console[cmd](`[${debugString}] ${log}`)
-    if (logfile !== undefined) {
-      fs.appendFileSync(logfile, `${Date.now()} [${debugString}] ${log}` + '\n', (err) => {
-        if (err) {
-          console.error(err)
-        }
-      })
-    }
-		if (level === 0) { process.exit() }
-  }
-}
-
-
-
-debuglog(`args:` + ogargs)
-debuglog(`debugLevel: ${debugLevel}/5`)
-
 const game = 'BBCF'
 
-debuglog('loading dbs from ' + path.resolve(`${__dirname}/static_db/${game}/`))
+const MODE = "<"
 
-const command_db = require(path.resolve(`${__dirname}/static_db/${game}/command_db.json`))
-debuglog(`command_db: ${JSON.stringify(command_db)}`, 5)
-const move_inputs = require(path.resolve(`${__dirname}/static_db/${game}/named_values/move_inputs.json`))
-debuglog(`move_inputs: ${JSON.stringify(move_inputs)}`, 5)
-const normal_inputs = require(path.resolve(`${__dirname}/static_db/${game}/named_values/normal_inputs.json`))
-debuglog(`normal_inputs: ${JSON.stringify(normal_inputs)}`, 5)
 
-let upon_db = require(path.resolve(`${__dirname}/static_db/${game}/upon_db/global.json`))
-debuglog(`upon_db: ${JSON.stringify(upon_db)}`, 5)
-let slot_db = require(path.resolve(`${__dirname}/static_db/${game}/slot_db/global.json`))
-debuglog(`slot_db: ${JSON.stringify(slot_db)}`, 5)
-let object_db = require(path.resolve(`${__dirname}/static_db/${game}/object_db/global.json`))
-debuglog(`object_db: ${JSON.stringify(object_db)}`, 5)
-
-let character_id = args[1].replace("scr_", "").split(".")[0]
-
-if (character_id.slice(2) === "ea" && character_id.length > 2) {
-  character_id = character_id.slice(0, -2)
-}
-
-debuglog(`character_id: ${JSON.stringify(character_id)}`)
-
-try {
-  let charupon = require(path.resolve(`${__dirname}/static_db/${game}/upon_db/${character_id}.json`))
-	debuglog(`charupon: ${charupon}`, 5)
-  upon_db = Object.assign({}, upon_db, charupon);
-} catch (error) {
-  debuglog(`Opening Character upon_db Failed with: ${error}`, 2)
-}
-
-try {
-  let charslot = require(path.resolve(`${__dirname}/static_db/${game}/slot_db/${character_id}.json`))
-  debuglog(`charslot: ${JSON.stringify(charslot)}`, 5)
-	slot_db = Object.assign({}, slot_db, charslot)
-} catch (error) {
-  debuglog(`Opening Character slot_db Failed with: ${error}`, 2)
-}
-
-let MODE = "<"
-
-let command_db_lookup = {}
-let slot_db_lookup = {}
-let named_value_lookup = {}
-let named_button_lookup = {}
-let named_direction_lookup = {}
-
-for (command in command_db) {
-  //console.log(command)
-  db_data = command_db[command]
-  if (db_data.name) {
-    command_db_lookup[db_data.name.toLowerCase()] = db_data
-    command_db_lookup[db_data.name.toLowerCase()].id = command;
-  }
-  command_db_lookup[unkString.toLowerCase() + command] = db_data
-  command_db_lookup[unkString.toLowerCase() + command].id = command;
-}
-
-for (value in move_inputs) {
-  named_value_lookup[move_inputs[value].toLowerCase()] = parseInt(value)
-}
-for (value in normal_inputs.grouped_values) {
-  named_value_lookup[normal_inputs.grouped_values[value].toLowerCase()] = parseInt(value)
-}
-for (value in normal_inputs.button_byte) {
-  named_button_lookup[normal_inputs.button_byte[value].toLowerCase()] = parseInt(value)
-}
-for (value in normal_inputs.direction_byte) {
-  named_direction_lookup[normal_inputs.direction_byte[value].toLowerCase()] = parseInt(value)
-}
-
-//console.log(named_value_lookup)
-//console.log(named_direction_lookup)
-//console.log(named_button_lookup)
+//console.log(dbObj.named_value_lookup)
+//console.log(dbObj.named_direction_lookup)
+//console.log(dbObj.named_button_lookup)
 
 function write(buf) {
 	output_buffer = Buffer.concat([output_buffer, buf])
@@ -178,31 +51,31 @@ function write(buf) {
 function decode_upon(argString) {
   string = argString.toLowerCase()
   if (!string.includes(uponString.toLowerCase())) {
-    debuglog('Passed Upon String Did Not Contain ' + uponString, 0);
+    debugLog('Passed Upon String Did Not Contain ' + uponString, 0);
   }
   string = string.replace(uponString.toLowerCase(), '')
 
   if(parseInt(string)) {
     return parseInt(string);
   }
-  for (entry in upon_db) {
-    if (upon_db[entry].toLowerCase() === string) {
+  for (entry in dbObj.uponDB) {
+    if (dbObj.uponDB[entry].toLowerCase() === string) {
       //console.log(entry)
-      //console.log(upon_db[entry])
+      //console.log(dbObj.uponDB[entry])
       return parseInt(entry);
     }
   }
-  debuglog('Unknown Upon: ' + argString, 0)
+  debugLog('Unknown Upon: ' + argString, 0)
 }
 
 function decode_slot(argString) {
   string = argString.toLowerCase()
   if (!string.startsWith(slotString.toLowerCase())) {
-    debuglog('Passed SLOT String Did Not Contain' + slotString, 0)
+    debugLog('Passed SLOT String Did Not Contain' + slotString, 0)
   } 
   string = string.replace(slotString.toLowerCase(), '')
-  for (entry in slot_db) {
-    if (slot_db[entry].toLowerCase() === string) {
+  for (entry in dbObj.slotDB) {
+    if (dbObj.slotDB[entry].toLowerCase() === string) {
       return parseInt(entry);
     }
   }
@@ -210,16 +83,16 @@ function decode_slot(argString) {
     return parseInt(string);
   }
 
-  debuglog('Unknown SLOT ' + argString, 0)
+  debugLog('Unknown SLOT ' + argString, 0)
 }
 
 function write_command_by_name(name, params) {
-  cmd_data = command_db_lookup[name.toLowerCase()];
+  cmd_data = dbObj.commandDB_lookup[name.toLowerCase()];
   write_command_by_id(cmd_data.id, params)
 }
 
 function write_command_by_id(id, params = []) {
-  cmd_data = command_db[id]
+  cmd_data = dbObj.commandDB[id]
   my_params = [];
   //console.log(params)
 
@@ -236,7 +109,7 @@ function write_command_by_id(id, params = []) {
       my_params[index] = param.value
     } 
     else if(param.type == "Identifier") {
-      temp = named_value_lookup[param.name.toLowerCase()]
+      temp = dbObj.named_value_lookup[param.name.toLowerCase()]
       if (temp) {
         my_params[index] = parseInt(temp)
       } else {
@@ -247,7 +120,7 @@ function write_command_by_id(id, params = []) {
         if ([43, 14001, 14012].includes(parseInt(id))) {
           buttonstr = param.id.slice(-1).toLowerCase()
           directionstr = param.id.slice(0, -1).toLowerCase()
-          my_params[index] = (parseInt(named_button_lookup[buttonstr]) << 8) + parseInt(named_direction_lookup(directionstr))
+          my_params[index] = (parseInt(dbObj.named_button_lookup[buttonstr]) << 8) + parseInt(dbObj.named_direction_lookup(directionstr))
         }
       }
     } else if (param.type == "UnaryExpression") {
@@ -310,7 +183,7 @@ class Rebuilder {
     if (typeof this[`visit_${node.type}`] == 'function') {
       this[`visit_${node.type}`](node);
     } else {
-      debuglog(`No handler for node type: ${node.type}`, 2);
+      debugLog(`No handler for node type: ${node.type}`, 2);
       this.generic_visit(node);
     }
   }
@@ -320,7 +193,7 @@ class Rebuilder {
     let temp = [];
     for (let [index, funcNode] of node.body.entries()) {
       if (funcNode.type != 'FunctionDeclaration') {
-        debuglog(funcNode.type + ' Found Outside Of Function At Line: ' + funcNode.loc.start.line, 0)
+        debugLog(funcNode.type + ' Found Outside Of Function At Line: ' + funcNode.loc.start.line, 0)
       }
 
       //console.log(getFunctionType(funcNode.params))
@@ -366,7 +239,7 @@ class Rebuilder {
       begin_id = 8
       end_id = 9
     } else {
-      debuglog('Unsupported Function Type "' + getFunctionType(node.params) + '" Found At Line: ' + node.loc.start.line, 0)
+      debugLog('Unsupported Function Type "' + getFunctionType(node.params) + '" Found At Line: ' + node.loc.start.line, 0)
     }
     node.id.name = node.id.name.replace('__sp__', ' ')
                                .replace('__qu__', '?')
@@ -381,10 +254,10 @@ class Rebuilder {
     let cmd_id = 0;
     if (node.callee.name.startsWith(unkString.toLowerCase())) {
 			cmd_id = name.replace(unkString.toLowerCase(), "");
-		} else if (command_db_lookup[name] !== undefined) {
-			cmd_id = command_db_lookup[name].id
+		} else if (dbObj.commandDB_lookup[name] !== undefined) {
+			cmd_id = dbObj.commandDB_lookup[name].id
 		} else {
-			debuglog("Unknown Command " + node.callee.name + " At Line: " + node.loc.start.line, 0)
+			debugLog("Unknown Command " + node.callee.name + " At Line: " + node.loc.start.line, 0)
 		}
     try {
       write_command_by_id(cmd_id, node.arguments)
@@ -421,7 +294,7 @@ class Rebuilder {
       end_id = 55
       slot = decode_slot(node.test.argument.name)
     } else {
-      debuglog('If Statement With Unsupported Test Field At Line: ' + node.loc.start.line, 0)
+      debugLog('If Statement With Unsupported Test Field At Line: ' + node.loc.start.line, 0)
     }
 
     //console.log(slot)
@@ -459,7 +332,7 @@ class Rebuilder {
       })
     } catch (error) {
       errorLevel += 1
-      debuglog(error, 1) // This Sucks compared to the python version but idc
+      debugLog(error, 1) // This Sucks compared to the python version but idc
     }
   }
   visit_Expr(node) {
@@ -486,7 +359,7 @@ function rebuild_bbscript(filename, output_dir) {
   } catch (err) {
     console.error(err)
   } finally {
-    if (dumpTree == 1 || errorLevel >= 1) {
+    if (argObj.dumpTree == 1 || errorLevel >= 1) {
       fs.writeFile(astOutput, JSON.stringify(ast, null, 2), (err) => { if (err) {console.error(err)}})
     }
 
@@ -498,16 +371,55 @@ function rebuild_bbscript(filename, output_dir) {
   }
 }
 
-if (!([2, 3].includes(args.length)) || path.extname(args[1]) != ".js") {
-  console.log("Usage:node BBCF_Script_Rebuilder.js scr_xx.js outdir [options]")
-  console.log("Default output directory if left blank is the input files directory.")
-	console.log("options:\n")
-	console.log("-D | --dumptree\n-d | --debug [level]\n-s | --streamsize {size[unit]}")
-	console.log("streamsize unit can be kb, mb, or gb, if not specified it will assume the number is bytes")
-  process.exit(1)
+let usageString = 'scr_xx.js outdir [opts]'
+let optString = require('../util/genOptString.js')(argObj)
+
+let dbObj
+
+function Rebuild(args) {
+  dbObj = require('../util/fetchDBs.js');
+  if (!([2, 3].includes(args.length)) || path.extname(args[1]) != ".js") return "Invalid Args";
+
+  let character_id = args[1].replace("scr_", "").split(".")[0]
+  if (character_id.slice(2) === "ea" && character_id.length > 2) {
+    character_id = character_id.slice(0, -2)
+  }
+  dbObj = require('../util/fetchDBs')(character_id);
+
+dbObj.commandDB_lookup = {}
+dbObj.slotDB_lookup = {}
+dbObj.named_value_lookup = {}
+dbObj.named_button_lookup = {}
+dbObj.named_direction_lookup = {}
+
+for (command in dbObj.commandDB) {
+  //console.log(command)
+  db_data = dbObj.commandDB[command]
+  if (db_data.name) {
+    dbObj.commandDB_lookup[db_data.name.toLowerCase()] = db_data
+    dbObj.commandDB_lookup[db_data.name.toLowerCase()].id = command;
+  }
+  dbObj.commandDB_lookup[unkString.toLowerCase() + command] = db_data
+  dbObj.commandDB_lookup[unkString.toLowerCase() + command].id = command;
 }
-if (args.length == 2) {
-  rebuild_bbscript(args[1], path.dirname(args[1]));
-} else {
-  rebuild_bbscript(args[1], args[2]);
+
+for (value in dbObj.moveInputs) {
+  dbObj.named_value_lookup[dbObj.moveInputs[value].toLowerCase()] = parseInt(value)
 }
+for (value in dbObj.normalInputs.grouped_values) {
+  dbObj.named_value_lookup[dbObj.normalInputs.grouped_values[value].toLowerCase()] = parseInt(value)
+}
+for (value in dbObj.normalInputs.button_byte) {
+  dbObj.named_button_lookup[dbObj.normalInputs.button_byte[value].toLowerCase()] = parseInt(value)
+}
+for (value in dbObj.normalInputs.direction_byte) {
+  dbObj.named_direction_lookup[dbObj.normalInputs.direction_byte[value].toLowerCase()] = parseInt(value)
+}
+  if (args.length == 2) {
+    rebuild_bbscript(args[1], path.dirname(args[1]));
+  } else {
+    rebuild_bbscript(args[1], args[2]);
+  }
+}
+
+module.exports = { Rebuild, optString, usageString }

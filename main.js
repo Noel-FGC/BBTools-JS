@@ -2,7 +2,7 @@ const path = require('node:path')
 const actions = {
   Parse: { path: './actions/BBCF_Script_Parser.js', handles: '.bin' },
   Rebuild: { path: './actions/BBCF_Script_Rebuilder.js', handles: '.js' },
-  List: { path: './actions/Get_Function_List.js' }
+  //List: { path: './actions/Get_Function_List.js' }
 }
 const debugLog = require('./util/debugLog.js')
 

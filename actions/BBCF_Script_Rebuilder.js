@@ -183,7 +183,7 @@ class Rebuilder {
     if (typeof this[`visit_${node.type}`] == 'function') {
       this[`visit_${node.type}`](node);
     } else {
-      debugLog(`No handler for node type: ${node.type}`, 2);
+      debugLog(`No handler for node type: ${node.type}`, 1);
       this.generic_visit(node);
     }
   }

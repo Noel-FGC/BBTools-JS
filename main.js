@@ -2,7 +2,7 @@ const path = require('node:path')
 const actions = {
   Parse: { path: './actions/BBCF_Script_Parser.js', handles: '.bin' },
   Rebuild: { path: './actions/BBCF_Script_Rebuilder.js', handles: '.js' },
-  //List: { path: './actions/Get_Function_List.js' }
+  List: { path: './actions/Get_Function_List.js' }
 }
 const debugLog = require('./util/debugLog.js')
 
@@ -28,8 +28,14 @@ Actions:`)
 }
 
 debugLog('Processing CLI Arguments', 3)
+
+
+
 const args = require('./util/processArgs.js')({}, true)
 debugLog(JSON.stringify(args, null, 2), 4)
+
+if (args._.length < 2) printHelpMenu();
+
 if (args.help.value) { 
   if (typeof args.help.value == 'string' && actions[args.help.value] !== undefined) {
     printHelpMenu(args.help.value)
@@ -39,6 +45,7 @@ if (args.help.value) {
 }
 
 let action
+
 
 if (actions[args._[1]] !== undefined) {
   action = args._[1]

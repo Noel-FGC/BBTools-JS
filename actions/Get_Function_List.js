@@ -2,25 +2,17 @@ const struct = require('python-struct');
 const fs = require('node:fs');
 const path = require('node:path');
 
-
 const MODE = '<';
 const GAME = 'BBCF';
 
 let data = {};
 
-let args = process.argv.slice(1);
-console.log(args);
+const command_db = require('../util/fetchDBs.js')().commandDB
 
-const command_db = require(path.resolve(`${__dirname}/static_db/${GAME}/command_db.json`))
-
-if (!args[1] || !(fs.existsSync(args[1]))) {
-	args[1] = path.dirname(args[0])
-}
-let realpath = path.resolve(args[1])
 
 function readbin(bin) {
   return new Promise(async (resolve, reject) => {
-    let file = fs.createReadStream(bin, { highWaterMark: 8000000 }) // 8 mb, this should be ridiculously overkill, tried to do some weird promise bullshit with other file events but it wouldn't work, i have no idea what im doing
+    let file = fs.createReadStream(bin, { highWaterMark: 8000000 })
     let filename = path.basename(bin)
     let chardata = data[filename]
     chardata = {};
@@ -68,12 +60,18 @@ function readbin(bin) {
   });
 };
 
-async function main() {
-	let output = __dirname
+async function List(args) {
+  
+  if (!args[2] || !(fs.existsSync(args[1]))) {
+    args[2] = path.dirname(args[1])
+  }
+
+  let realpath = path.resolve(args[1])
+
+  let output = __dirname
 	let data = {};
-  if (fs.existsSync(`${realpath}/.`)) {
+  if (fs.statSync(realpath).isDirectory()) {
     const files = fs.readdirSync(args[1]).filter(file => file.endsWith('.bin'));
-    let kms = 0
     for (const file of files) {
       let bindata = await readbin(`${realpath}/${file}`);
 			data[file] = Object.assign({}, data[file], bindata);
@@ -83,19 +81,21 @@ async function main() {
 
   } else {
     let bindata = await readbin(args[1]);
-    console.log(bindata);
+    //console.log(bindata);
     data = Object.assign({}, data, bindata);
  
 		output = path.dirname(realpath);
 		
-		console.log(output)
+		//console.log(output)
 	};
 
-	console.log(data);
+	//console.log(data);
   fs.writeFileSync(path.resolve(`${output}/FunctionList.json`), JSON.stringify(data, null, 2), { flag: 'w'}, err => {console.error(err)} );
 
-  console.log(args);
+  //console.log(args);
 }
 
+usageString = '<scr_xx.bin/Folder>'
+optString = ''
 
-main();
+module.exports = { List, usageString, optString }

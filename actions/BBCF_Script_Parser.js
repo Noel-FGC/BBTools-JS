@@ -427,7 +427,7 @@ function parse_bbscript_routine(filename) {
               break;
             }
 
-            let operation = '>>>';
+            let operation = '';
             let leftValue = 0;
             let rightValue = 0;
 
@@ -485,8 +485,6 @@ function parse_bbscript_routine(filename) {
             }
           }
         })
-      } catch(err) {
-        debugLog(`Creating Else If Statements Failed With: ${err}`, 1)
       }
       resolve(ast_root)
     });

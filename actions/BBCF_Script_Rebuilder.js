@@ -251,6 +251,7 @@ class Rebuilder {
   }
   visit_CallExpression(node) { // visit_Call
     let name = node.callee.name.toLowerCase()
+    if ([ '_if', '_else'].includes(name)) name = name.slice(1)
     let cmd_id = 0;
     if (node.callee.name.startsWith(unkString.toLowerCase())) {
 			cmd_id = name.replace(unkString.toLowerCase(), "");

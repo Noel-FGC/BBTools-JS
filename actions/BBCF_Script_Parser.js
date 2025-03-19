@@ -221,6 +221,7 @@ function parse_bbscript_routine(filename) {
         if ((tempRaw) && (current_cmd == 1 || current_cmd == 9)) { // Disable tempRaw On startState or startSubroutine
           tempRaw = false;
         }
+        if ([ 'if', 'else' ].includes(db_data.name)) db_data.name = '_' + db_data.name // names that make babel/prettier die
         ast_stack.push(types.CallExpression(types.Identifier(db_data.name), sanitizer(current_cmd, cmd_data), babelOptions))
         continue; // Continue to Next Loop
       }
@@ -465,6 +466,7 @@ function parse_bbscript_routine(filename) {
           ast_stack.pop(); // Pop Temporary Node
           break;
         default: // Everything Else
+          if ([ 'if', 'else' ].includes(db_data.name)) db_data.name = '_' + db_data.name // names that make babel/prettier die
           try {
             ast_stack.at(-1).push(types.CallExpression(types.Identifier(db_data.name), sanitizer(current_cmd, cmd_data), babelOptions))
           } catch(error) {

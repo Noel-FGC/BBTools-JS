@@ -10,18 +10,14 @@ function printHelpMenu(action) {
   if (action) {
     const { usageString, optString } = require(actions[action].path)
     console.log('Usage: ' + path.basename(__filename) + ' ' + action + ' ' + usageString + '\n')
-    console.log('\nOptions:\n')
+    console.log('Options:\n')
     console.log(optString)
   } else {
-    console.log(`
-Usage: ${path.basename(__filename)} Action [options]
-
-Options:
---help [Action]   Display this menu, or the help menu for the provided action.
--d, --debug       Change the logging level, and create a logfile.
-
-Actions:`)
-  console.log(Object.keys(actions).join('\n') + '\n')
+    console.log(`Usage: ${path.basename(__filename)} Action [options]` + '\n')
+    console.log('Options:\n')
+    console.log(require('./util/genOptString.js')(require('./util/processArgs.js')())) // Readability was never an option
+    console.log('Actions:\n')
+    console.log(Object.keys(actions).join('\n') + '\n')
   }
 
   process.exit()

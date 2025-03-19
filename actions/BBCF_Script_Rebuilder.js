@@ -176,7 +176,7 @@ function getFunctionType(params, name = 'MatchInit') {
 class Rebuilder {
   visit(node) { // handled by node.ExplicitNodeVisitor in python
     //console.log(node)
-    if (node.type == "ExpressionStatement" && node.expression.type == "CallExpression") {
+    if (node.type == "ExpressionStatement") {
       node = node.expression
     }
     //console.log(node)
@@ -319,8 +319,68 @@ class Rebuilder {
   visit_BinOp(node) {
 
   }
-  visit_Assign(node) {
+  visit_AssignmentExpression(node) { // visit_Assign
+    if (node.left.type !== 'Identifier') debugLog('Assignment to non-variable at ' + node.loc.start.line, 1);
+    let command = 0;
+    let args = [];
+    
+    if (node.right.type == 'BinaryExpression') {
+      command = 49;
+      let rightValue = 0;
+      let opID = 0;
+      let rightTypeIdentifier = 0;
+      let leftValue = decode_slot(node.left.name);
+      
+      if (node.right.right.type == 'Identifier') {
+        rightValue = decode_slot(node.right.right.name)
+        rightTypeIdentifier = 2;
+      } else {
+        rightValue = node.right.right.value
+      }
 
+      switch (node.right.operator) {
+        case '+':
+          opID = 0;
+          break;
+        case '-':
+          opID = 1;
+          break;
+        case '*':
+          opID = 2;
+          break;
+        case '/':
+          opID = 3;
+          break;
+        default:
+          debugLog('Unsupported Operator at line: ' + node.loc.start.line)
+      }
+
+      args = [
+        opID,
+        2,
+        leftValue,
+        rightTypeIdentifier,
+        rightValue
+      ];
+      
+    } else {
+      command = 43
+      let rightTypeIdentifier = 0;
+      //console.log(node.right)
+      if (node.right.type == 'Identifier') {
+        rightTypeIdentifier = 2
+        node.right.value = decode_slot(node.right.name)
+      }
+      args = [
+        2,
+        decode_slot(node.left.name),
+        rightTypeIdentifier,
+        node.right.value
+      ];
+    }
+
+    console.log(command + '(' + args.join(', ') + ')')
+    write_command_by_id(command, args)
   }
   visit_Compare(node) {
 

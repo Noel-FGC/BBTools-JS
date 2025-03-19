@@ -56,8 +56,6 @@ let errorLevel = 0;
 
 const babelOptions = {};
 
-const game = 'BBCF'
-
 const MODE = "<"
 
 

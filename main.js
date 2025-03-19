@@ -39,15 +39,15 @@ if (args.help.value) {
 }
 
 let action
-let passArgs
 
 if (actions[args._[1]] !== undefined) {
   action = args._[1]
-  passArgs = args._.slice(1)
+  args._ = args._.slice(1)
 } else {
-  for (entry in Object.keys(actions)) {
+  for (entry of Object.keys(actions)) {
     if (args._[1].endsWith(actions[entry].handles)) {
       action = entry;
+      break;
     }
   }
 }
@@ -61,7 +61,7 @@ debugLog('Attempting Action: "' + action + '" Using: ' + actions[action].path)
 const actionModule = require(actions[action].path)
 const actionFunction = actionModule[action]
 
-const returnValue = actionFunction(args._.slice(1));
+const returnValue = actionFunction(args._);
 
 if (returnValue == 'Invalid Args') {
   printHelpMenu(action)

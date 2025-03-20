@@ -31,7 +31,7 @@ const defaultOpts = {
 }
 
 function processArgs(opts = {}, noError = false) {
-  opts = Object.assign(opts, defaultOpts);
+  opts = Object.assign(defaultOpts, opts);
   
   const argObj = require('minimist')(process.argv.slice(1))
   for (entry in argObj) {

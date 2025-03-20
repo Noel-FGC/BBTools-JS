@@ -344,7 +344,66 @@ class Rebuilder {
     let command = 0;
     let args = [];
     
-    if (node.right.type == 'BinaryExpression') {
+    if (node.left.name == 'SLOT_0') {
+      let opID = 0;
+      let leftValue;
+      let rightValue;
+      let leftTypeIdentifier;
+      let rightTypeIdentifier;
+
+      if (node.right.left.type == 'Identifier') {
+        leftValue = decode_slot(node.right.left.name)
+        leftTypeIdentifier = 2
+      } else {
+        leftValue = node.right.left.value
+        leftTypeIdentifier = 0
+      }
+
+      if (node.right.right.type == 'Identifier') {
+        rightValue = decode_slot(node.right.right.name)
+        rightTypeIdentifier = 2
+      } else {
+        if(node.right.right.type == 'UnaryExpression' && node.right.right.operator == '-') {
+          rightValue = -node.right.right.argument.value
+        } else if (node.right.right.type == 'NumericLiteral'){
+          rightValue = node.right.right.value
+          rightTypeIdentifier = 0
+        } else {
+          debugLog('Parsing op With Unsupported ' + node.right.right.type + ' At: ' + node.loc.start.line)
+        }
+      }
+
+      switch (node.right.operator) {
+        case '==':
+          opID = 9;
+          break;
+        case '>':
+          opID = 10;
+          break;
+        case '<':
+          opID = 11;
+          break;
+        case '>=':
+          opID = 12;
+          break;
+        case '<=':
+          opID = 13;
+          break;
+      }
+
+      command = 40
+      args = [
+        opID,
+        leftTypeIdentifier,
+        leftValue,
+        rightTypeIdentifier,
+        rightValue
+      ]
+
+
+
+
+    } else if (node.right.type == 'BinaryExpression') {
       command = 49;
       let rightValue = 0;
       let opID = 0;
@@ -399,7 +458,7 @@ class Rebuilder {
       ];
     }
 
-    console.log(command + '(' + args.join(', ') + ')')
+    //console.log(command + '(' + args.join(', ') + ')')
     write_command_by_id(command, args)
   }
   visit_Compare(node) {

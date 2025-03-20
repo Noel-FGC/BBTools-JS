@@ -408,6 +408,46 @@ function parse_bbscript_routine(filename) {
         //case 39: //random
         //  break;
         case 40: //operation
+          (function() {
+            if (![9, 10, 11, 12, 13].includes(cmd_data[0])) {
+              ast_stack.at(-1).push(types.CallExpression(types.Identifier(db_data.name), sanitizer(current_cmd, cmd_data), babelOptions))
+              return;  
+            }
+
+            let leftValue
+            let rightValue
+            let operation = '==='
+
+            //console.log(cmd_data)
+
+            if (cmd_data[1] > 0) leftValue = types.Identifier(get_slot_name(cmd_data[2]));
+            else leftValue = types.NumericLiteral(cmd_data[2])
+
+            if (cmd_data[3] > 0) rightValue = types.Identifier(get_slot_name(cmd_data[4]));
+            else rightValue = types.NumericLiteral(cmd_data[4])
+
+            switch(cmd_data[0]) {
+            case 9:
+             operation = '=='
+              break;
+            case 10:
+              operation = '>'
+              break;
+            case 11:
+              operation = '<'
+              break;
+            case 12:
+              operation = '>='
+              break;
+            case 13:
+              operation = '<='
+              break;
+            }
+
+            //console.log('e')
+            ast_stack.at(-1).push(types.AssignmentExpression('=', types.Identifier('SLOT_0'), types.BinaryExpression(operation, leftValue, rightValue)))
+            
+          })()
           break;
         case 41: //StoreValue
           (function() { // put this in a function because letting leftValue and rightValue for some reason conflicts with ModifyVar
@@ -438,7 +478,7 @@ function parse_bbscript_routine(filename) {
           if (cmd_data[1] > 0) leftValue = types.Identifier(get_slot_name(cmd_data[2]));
           else leftValue = types.NumericLiteral(cmd_data[2]);
           
-          if (cmd_data[3] > 0) rightValue = get_slot_name(cmd_data[4]);
+          if (cmd_data[3] > 0) rightValue = types.Identifier(get_slot_name(cmd_data[4]));
           else rightValue = types.NumericLiteral(cmd_data[4]);
 
           switch (cmd_data[0]) {
@@ -456,6 +496,8 @@ function parse_bbscript_routine(filename) {
               break;
           }
 
+          console.log(cmd_data)
+          console.log(leftValue + operation + rightValue)
           let expression = types.BinaryExpression(operation, leftValue, rightValue)
 
           ast_stack.at(-1).push(types.AssignmentExpression('=', leftValue, expression))

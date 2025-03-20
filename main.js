@@ -27,7 +27,7 @@ debugLog('Processing CLI Arguments', 3)
 
 
 
-const args = require('./util/processArgs.js')({}, true)
+const args = JSON.parse(JSON.stringify(require('./util/processArgs.js')({}, true))) // for some god-fosaken reason this gets overwritten when the function is called again 
 debugLog(JSON.stringify(args, null, 2), 4)
 
 if (args._.length < 2) {
